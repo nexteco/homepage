@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>YuRadio 시뮬레이션</title>
+<meta name="description" content="노브를 돌려 방송을 찾는 안드로이드 라디오 앱 YuRadio를 브라우저에서 만져 보는 화면 시뮬레이션 (방송 소리는 나오지 않습니다)">
+<meta property="og:title" content="YuRadio 시뮬레이션">
+<meta property="og:description" content="노브를 돌려 방송을 찾는 라디오 앱 YuRadio — 브라우저에서 만져 보기">
+<meta name="theme-color" content="#15110D">
+<link rel="icon" href="assets/knob-base.png">
+<style>
+@font-face { font-family: "Playfair"; src: url("fonts/PlayfairDisplay-Bold.woff2") format("woff2"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "Playfair"; src: url("fonts/PlayfairDisplay-BoldItalic.woff2") format("woff2"); font-weight: 700; font-style: italic; font-display: swap; }
+@font-face { font-family: "Ionicons"; src: url("fonts/Ionicons-subset.woff2") format("woff2"); font-display: block; }
+
+/* ── 앱의 테마 색 (src/theme/colors.ts 그대로) ── */
+.phone, .sheet-wrap {
+  --bg:#15110D; --surface:#211A13; --surfaceAlt:#2A2119;
+  --text:#F3E7D3; --textSecondary:#BCAC94; --textSoft:#D2C4AE; --textMuted:#9D8E78; --headerLabel:#9D8E78;
+  --border:#3A2E22; --borderSoft:#2E251C; --borderDashed:#5A4A3A;
+  --accent:#E9960A; --accentBright:#EFA43A; --accentText:#F4CD8C; --accentDeep:#33261A; --onAccent:#1A130C;
+  --power:#E4563F; --onAir:#FF5A42;
+  --dialGlass:#F1E2C1; --dialInk:#3D2B19; --dialWindowRing:#2A2119; --dialFreq:#9E4F08; --freqDim:#9A7747; --dialUnit:#9D8E78;
+  --onAirLampOff:#8C8273; --onAirLampOffRing:#6E6455; --onAirTextOff:#857862; --dialLampSeek:#E9960A; --dialOffVeil:rgba(178,168,150,0.45);
+  --knobTray:#17120D; --knobTrayEdge:#0D0A07;
+  --needleFM:#D8452C; --needleFMLabel:#B8321D; --needleAM:#1E3A8A; --needleAMLabel:#1E3A8A;
+  --weatherSun:#F2B544; --backdrop:rgba(8,6,4,0.72);
+}
+[data-theme="walnut"] {
+  --bg:#4A2F1C; --surface:#5F3E26; --surfaceAlt:#2C1C10;
+  --text:#FFF4DE; --textSecondary:#DCC39B; --textSoft:#EEDBBB; --textMuted:#C2A77F; --headerLabel:#C2A77F;
+  --border:#7D573A; --borderSoft:#6E4C33; --borderDashed:#8A6243;
+  --accent:#F2B63A; --accentBright:#FFC95A; --accentText:#FFE1A0; --accentDeep:#73491F;
+  --power:#FF6B4A; --dialGlass:#F6E27A; --dialWindowRing:#2C1C10; --dialUnit:#6E6252; --dialLampSeek:#C7620A;
+  --knobTray:#1E1408; --knobTrayEdge:#0F0C00;
+}
+[data-theme="wood"] {
+  --bg:#8C572F; --surface:#A06B3F; --surfaceAlt:#3A2413;
+  --text:#FFF7E6; --textSecondary:#EBD3AC; --textSoft:#F6E3C2; --textMuted:#DDC196; --headerLabel:#F6E3C2;
+  --border:#6A4124; --borderSoft:#7A4B28; --borderDashed:#5E3B1F;
+  --accent:#F2C14A; --accentBright:#FFD469; --accentText:#FFE7A8; --accentDeep:#6A4124;
+  --power:#FF6B4A; --dialGlass:#F7E66A; --dialWindowRing:#3A2413; --dialUnit:#6E6252; --dialLampSeek:#C7620A;
+  --weatherSun:#FFD969; --knobTray:#1E1408; --knobTrayEdge:#0F0C00;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: #0D0A07; color: #E9DCC6;
+  font-family: system-ui, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", "Roboto", sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+a { color: #EFA43A; }
+.ion { font-family: "Ionicons"; font-style: normal; font-weight: normal; line-height: 1; display: inline-block; speak: never; }
+
+/* ── 페이지 (휴대폰 바깥) ── */
+.page { max-width: 980px; margin: 0 auto; padding: 20px 16px 48px; display: grid; gap: 24px; grid-template-columns: 1fr; justify-items: center; }
+.top { width: 100%; max-width: 420px; display: flex; flex-direction: column; gap: 10px; }
+.top-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 14px; }
+.top-row a { text-decoration: none; font-weight: 600; }
+.badge { font-size: 12px; font-weight: 700; color: #1A130C; background: #E9960A; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+.notice { margin: 0; font-size: 14px; line-height: 1.55; color: #D2C4AE; background: #1A150F; border: 1px solid #3A2E22; border-radius: 14px; padding: 12px 14px; }
+.notice b { color: #F3E7D3; }
+.tips { width: 100%; max-width: 420px; font-size: 14px; line-height: 1.6; color: #BCAC94; }
+.tips h2 { font-size: 15px; color: #F3E7D3; margin: 0 0 8px; }
+.tips ol { margin: 0; padding-left: 20px; }
+.tips li { margin: 2px 0; }
+.tips .sound { margin-top: 14px; display: flex; align-items: center; gap: 10px; }
+.tips button { font: inherit; font-size: 13px; color: #F3E7D3; background: #211A13; border: 1px solid #3A2E22; border-radius: 999px; padding: 6px 12px; cursor: pointer; }
+.tips .foot { margin-top: 16px; font-size: 12px; color: #9D8E78; }
+@media (min-width: 900px) {
+  .page { grid-template-columns: 420px 1fr; align-items: start; justify-items: start; column-gap: 40px; padding-top: 32px; }
+  .top { grid-column: 1 / -1; max-width: none; }
+  .tips { position: sticky; top: 24px; max-width: 420px; padding-top: 8px; }
+}
+
+/* ── 휴대폰 틀 ── */
+.phone {
+  position: relative; width: 100%; max-width: 420px; background: var(--bg); color: var(--text);
+  border-radius: 34px; border: 10px solid #050403; box-shadow: 0 30px 80px rgba(0,0,0,0.55);
+  overflow: hidden; transition: background-color .3s;
+  user-select: none; -webkit-user-select: none;
+}
+@media (max-width: 480px) {
+  .page { padding: 12px 0 40px; gap: 16px; }
+  .top, .tips { padding: 0 16px; }
+  .phone { border-width: 0; border-radius: 0; box-shadow: none; max-width: none; }
+}
+.app { display: flex; flex-direction: column; gap: 12px; padding: 8px 20px 10px; }
+
+/* 헤더 — 로고 + 녹음 · 타이머 · 설정 · 전원 (칸 46 × 48) */
+.header { height: 48px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.logo { font-family: "Playfair", serif; font-style: italic; font-weight: 700; font-size: 28px; letter-spacing: .5px; color: var(--text); white-space: nowrap; }
+.hbtns { display: flex; gap: 2px; }
+.hbtn { width: 46px; height: 48px; border: 0; padding: 0; background: none; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; color: var(--textSoft); }
+.hbtn .ic { width: 32px; height: 32px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+.hbtn .lb { font-size: 10.5px; line-height: 13px; font-weight: 600; letter-spacing: -.1px; color: var(--headerLabel); }
+.hbtn.dim { opacity: .4; }
+.recdot { width: 20px; height: 20px; border-radius: 10px; background: var(--onAir); }
+.hbtn.power .ic { color: var(--power); font-size: 23px; }
+.phone.off .hbtn.power .ic { color: var(--accentBright); background: var(--accentDeep); }
+
+/* 지역 줄 */
+.region { min-height: 40px; display: flex; align-items: center; gap: 8px; }
+.region .left { flex: 1; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.region .pin { width: 16px; text-align: center; color: var(--textSecondary); font-size: 15px; }
+.region .name { font-size: 15px; font-weight: 700; color: var(--text); }
+.region button { border: 0; background: none; cursor: pointer; }
+.region .change { height: 44px; padding: 0 8px; font-size: 14px; font-weight: 700; color: var(--accentBright); }
+.region .locate { width: 44px; height: 44px; font-size: 22px; color: var(--textSoft); }
+
+/* 다이얼 상자 */
+.box { margin: 0 -10px; background: var(--surface); border: 1px solid var(--border); border-radius: 22px; padding: 12px 0 14px; }
+.status { display: flex; align-items: center; justify-content: space-between; padding: 0 10px 10px 18px; }
+.wx { display: flex; align-items: center; gap: 7px; min-height: 28px; }
+.wx .ion { font-size: 22px; color: var(--weatherSun); }
+.wx .temp { font-family: "Playfair", serif; font-weight: 700; font-size: 20px; color: var(--text); }
+.wx .cond { font-size: 14px; font-weight: 600; color: var(--textSoft); }
+.wx .hum { display: flex; align-items: center; gap: 3px; margin-left: 2px; font-size: 13px; color: var(--textSecondary); }
+.wx .hum .ion { font-size: 12px; color: #7FA7D9; }
+.bands { display: flex; background: var(--bg); border: 1px solid var(--border); border-radius: 22px; padding: 3px; }
+.bands button { border: 0; background: none; cursor: pointer; height: 38px; padding: 0 14px; border-radius: 19px; font: inherit; font-size: 15px; font-weight: 700; color: var(--textSecondary); }
+.bands button.on { background: var(--accent); color: var(--onAccent); font-weight: 800; }
+
+.winwrap { padding: 0 8px; }
+.dial { position: relative; }
+.dial .glow { position: absolute; pointer-events: none; transition: opacity .5s; }
+.dial .ring { position: absolute; inset: 0; padding: 3px; border-radius: 17px; background: var(--dialWindowRing); }
+.dial .win { position: relative; border-radius: 14px; border: 1.5px solid var(--dialInk); overflow: hidden; background: var(--dialGlass); }
+.dial .glass { position: absolute; inset: 0; width: 100%; height: 100%; }
+.dial .glass.lit { transition: opacity .5s; }
+.dial .rule { position: absolute; left: 0; right: 0; height: 1.5px; background: var(--dialInk); }
+.dial .strip { position: absolute; left: 0; top: 0; bottom: 0; width: 0; will-change: transform; }
+.dial .tk { position: absolute; background: var(--dialInk); }
+.dial .num { position: absolute; width: 48px; text-align: center; font-family: "Playfair", serif; font-weight: 700; color: var(--dialInk); }
+.dial .abs { position: absolute; pointer-events: none; }
+.dial .nglow { position: absolute; width: 9px; border-radius: 4.5px; transition: opacity .5s; }
+.dial .label { position: absolute; font-weight: 800; white-space: nowrap; transition: opacity .26s; }
+.dial .freqrow { position: absolute; right: 14px; display: flex; align-items: flex-end; gap: 6px; pointer-events: none; }
+.dial .freq { font-family: "Playfair", serif; font-weight: 700; font-variant-numeric: lining-nums; }
+.dial .unit { font-weight: 500; color: var(--dialUnit); }
+.dial .onair { position: absolute; left: 12px; display: flex; align-items: center; gap: 8px; }
+.dial .lampbox { position: relative; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+.dial .halo { position: absolute; inset: 0; border-radius: 11px; }
+.dial .lamp { width: 11px; height: 11px; border-radius: 5.5px; }
+.dial .shine { position: absolute; left: 7.5px; top: 7.5px; width: 3.5px; height: 3.5px; border-radius: 2px; background: rgba(255,255,255,.55); }
+.dial .onairtext { font-size: 13px; font-weight: 800; letter-spacing: 2px; }
+.dial .veil { position: absolute; inset: 0; background: var(--dialOffVeil); pointer-events: none; transition: opacity .5s; }
+
+/* 튜닝 노브 칸 */
+.tray { margin: 10px 8px 12px; height: 96px; display: flex; align-items: center; border-radius: 16px; background: var(--knobTray); border-top: 2px solid var(--knobTrayEdge); border-bottom: 1px solid var(--borderSoft); overflow: hidden; }
+.side { flex: 1; align-self: stretch; display: flex; align-items: center; gap: 6px; border: 0; background: none; cursor: pointer; font: inherit; font-size: 16px; font-weight: 700; color: var(--textSoft); }
+.side .ion { font-size: 16px; }
+.side.prev { justify-content: flex-start; padding-left: 20px; }
+.side.next { justify-content: flex-end; padding-right: 20px; }
+.side:active, .side.flash { color: var(--accentBright); }
+.knob { position: relative; width: 96px; height: 96px; touch-action: none; cursor: grab; outline: none; border-radius: 48px; }
+.knob:focus-visible { box-shadow: 0 0 0 2px var(--accentBright); }
+.knob.drag { cursor: grabbing; }
+.knob img { position: absolute; width: 88px; height: 88px; left: 4px; top: 4px; pointer-events: none; }
+.knob .rotor { transition: transform .18s ease-out; }
+.knob.drag .rotor { transition: none; }
+
+/* 프로그램 · 곡 */
+.info { padding: 0 16px; display: flex; flex-direction: column; gap: 6px; }
+.prog { display: flex; align-items: center; gap: 8px; min-height: 24px; font-size: 15px; color: var(--textSoft); }
+.prog .ion { width: 16px; text-align: center; font-size: 16px; color: var(--textSecondary); }
+.song { margin-top: 4px; min-height: 44px; display: flex; align-items: center; padding: 0 12px; border-radius: 14px; background: var(--surfaceAlt); font-size: 14px; color: var(--textMuted); }
+
+/* 즐겨찾기 */
+.presets { display: flex; flex-direction: column; gap: 10px; }
+.presets .head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.presets .title { font-size: 16px; font-weight: 800; color: var(--text); }
+.presets .hint { font-size: 12px; color: var(--textSecondary); }
+.tiles { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.tiles::-webkit-scrollbar { display: none; }
+.tile { flex: 1 0 62px; max-width: 80px; height: 72px; border-radius: 14px; border: 1.5px solid var(--border); background: var(--surface); color: var(--text); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 0 4px; cursor: pointer; font: inherit; }
+.tile .n { font-size: 14px; line-height: 17px; font-weight: 700; text-align: center; word-break: keep-all; }
+.tile .f { font-size: 11px; color: var(--textSecondary); }
+.tile.on { border-color: var(--accent); background: var(--accentDeep); }
+.tile.empty { border-style: dashed; border-color: var(--borderDashed); background: var(--bg); color: var(--textMuted); }
+.tile.empty .n { font-size: 12px; font-weight: 600; color: var(--textMuted); }
+.handle { display: flex; justify-content: center; padding: 6px 0 4px; }
+.handle button { width: 120px; height: 28px; border: 0; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.handle span { width: 44px; height: 5px; border-radius: 3px; background: var(--borderDashed); }
+
+/* 알림 · 시트 */
+.toast { position: absolute; left: 50%; bottom: 84px; transform: translate(-50%, 12px); max-width: calc(100% - 40px); width: max-content; background: #2A2119; color: #F3E7D3; border: 1px solid #5A4A3A; border-radius: 14px; padding: 10px 14px; font-size: 13.5px; line-height: 1.45; text-align: center; opacity: 0; pointer-events: none; transition: opacity .2s, transform .2s; z-index: 5; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.sheet-wrap { position: absolute; inset: 0; background: var(--backdrop); display: none; align-items: flex-end; z-index: 6; }
+.sheet-wrap.show { display: flex; }
+.sheet { width: 100%; background: var(--surface); color: var(--text); border-radius: 22px 22px 0 0; padding: 10px 20px 22px; border-top: 1px solid var(--border); }
+.sheet .grab { width: 44px; height: 5px; border-radius: 3px; background: var(--borderDashed); margin: 0 auto 14px; }
+.sheet h3 { margin: 0 0 4px; font-size: 17px; }
+.sheet p { margin: 0 0 14px; font-size: 13px; color: var(--textSecondary); line-height: 1.5; }
+.themes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.theme { border: 1.5px solid var(--border); background: var(--surfaceAlt); color: var(--text); border-radius: 14px; padding: 10px 6px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 700; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.theme.on { border-color: var(--accent); }
+.theme .sw { width: 100%; height: 44px; border-radius: 9px; position: relative; overflow: hidden; }
+.theme .sw i { position: absolute; left: 14%; right: 14%; top: 26%; bottom: 26%; border-radius: 5px; }
+.sheet .close { margin-top: 16px; width: 100%; height: 46px; border-radius: 14px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dial .glow, .dial .glass.lit, .dial .veil, .dial .label, .knob .rotor { transition: none; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="top">
+    <div class="top-row">
+      <a href="https://github.com/nexteco/homepage/blob/main/yuradio/README.md">← YuRadio 소개</a>
+      <span class="badge">웹 시뮬레이션</span>
+    </div>
+    <p class="notice">앱 화면을 그대로 본뜬 시뮬레이션입니다. 노브를 돌려 방송을 찾는 느낌을 볼 수 있지만, <b>방송 소리는 나오지 않습니다.</b> 실제 방송은 안드로이드 앱에서 들을 수 있어요 — <a href="https://github.com/nexteco/homepage/blob/main/yuradio/README.md#설치-방법">설치 방법</a></p>
+  </div>
+
+  <div class="phone" id="phone" data-theme="dark">
+    <div class="app">
+      <div class="header">
+        <div class="logo">YuRadio</div>
+        <div class="hbtns">
+          <button class="hbtn needs-power" data-msg="rec" aria-label="녹음"><span class="ic"><span class="recdot"></span></span><span class="lb">녹음</span></button>
+          <button class="hbtn needs-power" data-msg="timer" aria-label="타이머"><span class="ic"><i class="ion">&#xF5E1;</i></span><span class="lb">타이머</span></button>
+          <button class="hbtn" id="btnSettings" aria-label="설정"><span class="ic"><i class="ion">&#xF56C;</i></span><span class="lb">설정</span></button>
+          <button class="hbtn power" id="btnPower" aria-label="전원 끄기"><span class="ic"><i class="ion">&#xF4E7;</i></span><span class="lb">전원</span></button>
+        </div>
+      </div>
+
+      <div class="region">
+        <div class="left"><i class="ion pin">&#xF3C5;</i><span class="name">서울·경기·인천</span></div>
+        <button class="change" data-msg="region">변경</button>
+        <button class="locate" data-msg="locate" aria-label="내 위치로 찾기"><i class="ion">&#xF3C1;</i></button>
+      </div>
+
+      <div class="box">
+        <div class="status">
+          <div class="wx" title="예시 날씨"><i class="ion">&#xF490;</i><span class="temp">19°</span><span class="cond">구름 조금</span><span class="hum"><i class="ion">&#xF62E;</i>88%</span></div>
+          <div class="bands" role="group" aria-label="밴드">
+            <button id="bandFM" class="on">FM</button><button id="bandAM">AM</button>
+          </div>
+        </div>
+        <div class="winwrap"><div class="dial" id="dial"></div></div>
+        <div class="tray">
+          <button class="side prev" id="btnPrev" aria-label="이전 방송"><i class="ion">&#xF1EA;</i>이전</button>
+          <div class="knob" id="knob" tabindex="0" role="slider" aria-label="튜닝 노브 — 돌리거나 화살표 키로 방송 찾기" aria-valuetext="">
+            <img src="assets/knob-base.png" alt="">
+            <img class="rotor" id="rotor" src="assets/knob-rotor.png" alt="">
+          </div>
+          <button class="side next" id="btnNext" aria-label="다음 방송">다음<i class="ion">&#xF1F6;</i></button>
+        </div>
+        <div class="info">
+          <div class="prog"><i class="ion">&#xF506;</i><span id="prog"></span></div>
+          <div class="song" id="song">곡 정보는 앱에서 볼 수 있어요</div>
+        </div>
+      </div>
+
+      <div class="presets">
+        <div class="head"><span class="title">즐겨찾기</span><span class="hint">길게 눌러 저장 · 이동 · 비우기</span></div>
+        <div class="tiles" id="tiles"></div>
+      </div>
+      <div class="handle"><button data-msg="menu" aria-label="메뉴"><span></span></button></div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <div class="sheet-wrap" id="sheet">
+      <div class="sheet" role="dialog" aria-label="화면 설정">
+        <div class="grab"></div>
+        <h3>테마</h3>
+        <p>앱의 설정 › 화면에서 고르는 세 가지 테마입니다. 나라 · 언어 · 청취 모드 같은 다른 설정은 앱에서 바꿀 수 있어요.</p>
+        <div class="themes">
+          <button class="theme" data-theme-id="dark"><span class="sw" style="background:#211A13"><i style="background:#F1E2C1"></i></span>밤색</button>
+          <button class="theme" data-theme-id="walnut"><span class="sw" style="background:#5F3E26"><i style="background:#F6E27A"></i></span>호두나무</button>
+          <button class="theme" data-theme-id="wood"><span class="sw" style="background:#A06B3F"><i style="background:#F7E66A"></i></span>나무 라디오</button>
+        </div>
+        <button class="close" id="sheetClose">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tips">
+    <h2>이렇게 만져 보세요</h2>
+    <ol>
+      <li><b>노브를 원을 그리듯 돌려 보세요.</b> 마우스로 끌거나 손가락으로 돌리면 한 칸마다 '딸깍' 하고 한 방송씩 넘어갑니다.</li>
+      <li>노브 양옆의 <b>이전 · 다음</b>을 눌러도 되고, 키보드의 ← → 도 됩니다.</li>
+      <li>찾는 동안 눈금이 흐르고 ON AIR 표시등이 주황이 됩니다. 바늘이 방송에 닿아야 이름이 뜹니다.</li>
+      <li><b>FM · AM</b>을 바꿔 보세요. 바늘 색이 빨강에서 파랑으로 바뀝니다.</li>
+      <li>오른쪽 위 <b>전원</b>으로 끄고 켜 보세요.</li>
+      <li><b>설정</b>(톱니바퀴)에서 테마를 바꿀 수 있습니다.</li>
+      <li>아래 <b>즐겨찾기</b> 칸을 누르면 그 방송으로 바로 갑니다.</li>
+    </ol>
+    <div class="sound"><button id="btnSound" aria-pressed="true">딸깍 소리 켬</button><span>노브의 딸깍 소리만 납니다</span></div>
+    <p class="foot">서울·경기·인천의 FM 27개 · AM 5개 방송 위치는 앱의 방송표와 같습니다. 프로그램 · 곡 정보, 녹음, 예약, 다른 나라 다이얼은 앱에서만 됩니다.<br>글꼴: Playfair Display (SIL OFL) · 아이콘: Ionicons (MIT)</p>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ── 방송표 (앱의 수도권 다이얼과 같다: src/radio/bandPlan.ts · plans/kr.ts · data/koreaDefaults.ts) ──
+  const STATIONS = {
+    FM: [
+      [89.1, "KBS 2FM", "가요"], [89.7, "WBS 원음방송", "종교·음악"], [90.7, "경인방송", "종합"],
+      [91.9, "MBC FM4U", "가요"], [93.1, "KBS 1FM", "클래식"], [93.9, "CBS 음악FM", "가요"],
+      [94.5, "YTN 라디오", "뉴스"], [95.1, "TBS FM", "종합"], [95.9, "MBC 표준FM", "종합"],
+      [96.7, "국방FM", "종합"], [97.3, "KBS 1라디오", "종합"], [98.1, "CBS 표준FM", "시사·종교"],
+      [99.1, "국악방송", "국악"], [99.9, "OBS 라디오", "종합"], [100.3, "관악FM", "공동체"],
+      [100.5, "TBN 교통방송", "교통"], [100.7, "마포FM", "공동체"], [101.3, "TBS eFM", "영어"],
+      [101.9, "BBS 불교방송", "종교"], [102.7, "AFN", "영어·미군방송"], [103.5, "SBS 러브FM", "종합"],
+      [104.5, "EBS FM", "교육"], [104.9, "KBS 3라디오", "사회·복지"], [105.3, "평화방송", "종교"],
+      [106.1, "KBS 2라디오", "종합"], [106.9, "극동방송", "종교"], [107.7, "SBS 파워FM", "가요"],
+    ],
+    AM: [
+      [603, "KBS 2라디오", "종합"], [711, "KBS 1라디오", "종합"], [837, "CBS 라디오", "시사·종교"],
+      [972, "한민족방송", "종합"], [1134, "KBS 3라디오", "사회·복지"],
+    ],
+  };
+  for (const b of ["FM", "AM"]) STATIONS[b] = STATIONS[b].map(([f, l, g]) => ({ band: b, f, l, g }));
+
+  // 대역 (src/radio/countries.ts — 한국 규격)
+  const SPEC = {
+    FM: { lo: 87.5, hi: 108, unit: "MHz", dec: 1, tickStep: 0.5, majorEvery: 2, midEvery: 1, labels: [88, 92, 96, 100, 104, 108], rollStep: 0.1 },
+    AM: { lo: 531, hi: 1602, unit: "kHz", dec: 0, tickStep: 25, majorEvery: 100, midEvery: 50, labels: [600, 800, 1000, 1200, 1400, 1600], rollStep: 9 },
+  };
+  const GAP = 0.16, NEEDLE_FRAC = 0.2, PAD = 22, RING = 3, BORDER = 1.5, GLOW = 24;
+  const SEEK_BASE = 600, SEEK_PER_PX = 12, SEEK_MAX = 1600, NOMINAL_PX = 266, DETENT = 36;
+  const reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const period = (b) => (SPEC[b].hi - SPEC[b].lo) * (1 + GAP);
+  const norm = (b, v) => { const { lo } = SPEC[b], p = period(b); return lo + ((((v - lo) % p) + p) % p); };
+  const freqAt = (b, v) => {
+    const { lo, hi } = SPEC[b]; const x = norm(b, v);
+    if (x <= hi) return x;
+    return x - hi < (period(b) - (hi - lo)) / 2 ? hi : lo;
+  };
+  const seekTo = (b, from, to, dir) => {
+    const p = period(b); let t = from - norm(b, from) + to; const e = 1e-6;
+    if (dir > 0) { while (t <= from + e) t += p; while (t - p > from + e) t -= p; }
+    else { while (t >= from - e) t -= p; while (t + p < from - e) t += p; }
+    return t;
+  };
+  const directTo = (b, from, to) => from - norm(b, from) + to;
+  const nextStation = (b, fromF, dir) => {
+    const s = STATIONS[b]; const e = 1e-6;
+    if (dir > 0) return s.find((x) => x.f > fromF + e) || s[0];
+    for (let i = s.length - 1; i >= 0; i--) if (s[i].f < fromF - e) return s[i];
+    return s[s.length - 1];
+  };
+  const fmt = (b, f) => f.toFixed(SPEC[b].dec);
+  const rolling = (b, f) => {
+    const { rollStep, dec, lo, hi } = SPEC[b];
+    const c = Math.max(lo, Math.min(hi, f));
+    return Math.min(hi, lo + Math.round((c - lo) / rollStep) * rollStep).toFixed(dec);
+  };
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+  // ── 상태 ──
+  const S = {
+    band: "FM", power: true, phase: "locked", theme: "dark", sound: true,
+    needle: 91.9, station: STATIONS.FM[3], dest: null, anim: null,
+    last: { FM: STATIONS.FM[3], AM: STATIONS.AM[1] },
+    knobDeg: 0, presets: [STATIONS.FM[0], STATIONS.FM[3], STATIONS.FM[4], STATIONS.FM[5], null],
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const phone = $("phone"), dialEl = $("dial"), rotor = $("rotor"), knob = $("knob");
+  const css = (name) => getComputedStyle(phone).getPropertyValue(name).trim();
+
+  // ── 눈금창 그리기 (src/components/dial/DialWindow.tsx와 같은 비율) ──
+  const G = {};
+  function buildDial() {
+    const wrap = dialEl.parentElement, cs = getComputedStyle(wrap);
+    const W = Math.round(wrap.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
+    const H = Math.round(clamp(W * 0.56, 150, 230));
+    const w = W - (RING + BORDER) * 2, h = H - (RING + BORDER) * 2;
+    const spec = SPEC[S.band], p = period(S.band);
+    const px = (w - PAD * 2) / (spec.hi - spec.lo);
+    const nx = Math.round(PAD + NEEDLE_FRAC * (w - PAD * 2));
+    const top = Math.round(h * 0.52);
+    const bot = Math.round(top + clamp(h * 0.23, 30, 52));
+    const maj = clamp((bot - top) * 0.5, 12, 24);
+    const ps = (bot - top) / 50;
+    const numSize = Math.round(clamp(h * 0.074, 11, 16));
+    const labelSize = Math.round(clamp(h * 0.08, 13, 17));
+    const freqSize = Math.round(clamp(h * 0.27, 30, 58));
+    const yellow = S.theme !== "dark";
+    Object.assign(G, { W, H, w, h, px, nx, top, bot, p });
+
+    let ticks = "", nums = "";
+    const s10 = Math.round(spec.tickStep * 10), maj10 = Math.round(spec.majorEvery * 10), mid10 = Math.round(spec.midEvery * 10);
+    for (const k of [-1, 0, 1]) {
+      const shift = k * p;
+      for (let i = Math.ceil((spec.lo * 10) / s10); i * s10 <= spec.hi * 10; i++) {
+        const v10 = i * s10;
+        const isMaj = v10 % maj10 === 0, isMid = v10 % mid10 === 0;
+        const th = isMaj ? maj : isMid ? Math.round(maj * 0.6) : Math.round(maj * 0.33);
+        const tw = isMaj ? 2 : isMid ? 1.5 : 1;
+        ticks += `<div class="tk" style="left:${((v10 / 10 - spec.lo + shift) * px - tw / 2).toFixed(2)}px;top:${bot - th + 1}px;width:${tw}px;height:${th}px"></div>`;
+      }
+      for (const n of spec.labels) nums += `<div class="num" style="left:${((n - spec.lo + shift) * px - 24).toFixed(2)}px;top:${bot + 12}px;font-size:${numSize}px;line-height:${Math.round(numSize * 1.3)}px">${n}</div>`;
+    }
+    const pointer = S.band === "AM" ? "pointer-am" : "pointer-fm";
+    const onairTop = Math.round(clamp(h * 0.065, 8, 16));
+    dialEl.style.width = W + "px";
+    dialEl.style.height = H + "px";
+    dialEl.innerHTML = `
+      <img class="glow" src="assets/window-glow.png" alt="" style="left:${-GLOW}px;top:${-GLOW}px;width:${W + GLOW * 2}px;height:${H + GLOW * 2}px">
+      <div class="ring"><div class="win" style="width:${w + BORDER * 2}px;height:${h + BORDER * 2}px">
+        <img class="glass" src="assets/window-dim${yellow ? "-yellow" : ""}.png" alt="">
+        <img class="glass lit" src="assets/window-lit${yellow ? "-yellow" : ""}.png" alt="">
+        <div class="rule" style="top:${bot}px"></div>
+        <div class="strip" id="strip">${ticks}${nums}</div>
+        <img class="abs" src="assets/pointer-shadow.png" alt="" style="left:${nx - 18 * ps + 6}px;top:${top - 3 - 7 * ps + 4}px;width:${36 * ps}px;height:${82 * ps}px;opacity:.55">
+        <div class="nglow" id="nglow" style="left:${nx - 4.5}px;top:${top - 4}px;height:${bot - top + 4}px;background:var(--needle${S.band})"></div>
+        <img class="abs" src="assets/${pointer}.png" alt="" style="left:${nx - 12 * ps}px;top:${top - 3 - ps}px;width:${24 * ps}px;height:${70 * ps}px">
+        <div class="label" id="label" style="font-size:${labelSize}px;line-height:${Math.round(labelSize * 1.35)}px;top:${top - 8 - Math.round(labelSize * 1.35)}px;color:var(--needle${S.band}Label)"></div>
+        <div class="freqrow" style="top:${Math.round(h * 0.05)}px">
+          <span class="freq" id="freq" style="font-size:${freqSize}px;line-height:${Math.round(freqSize * 1.1)}px"></span>
+          <span class="unit" style="font-size:${Math.round(clamp(freqSize * 0.31, 13, 18))}px;margin-bottom:${Math.round(freqSize * 0.16)}px">${spec.unit}</span>
+        </div>
+        <div class="onair" style="top:${onairTop}px"><span class="lampbox"><span class="halo" id="halo"></span><span class="lamp" id="lamp"></span><span class="shine" id="shine"></span></span><span class="onairtext" id="onairtext">ON AIR</span></div>
+        <div class="veil" id="veil"></div>
+      </div></div>`;
+    G.strip = $("strip"); G.freq = $("freq"); G.label = $("label");
+    G.lamp = $("lamp"); G.halo = $("halo"); G.shine = $("shine"); G.onairtext = $("onairtext");
+    G.veil = $("veil"); G.nglow = $("nglow"); G.glow = dialEl.querySelector(".glow"); G.lit = dialEl.querySelector(".glass.lit");
+    draw(); paintState();
+  }
+
+  function draw() {
+    if (!G.strip) return;
+    const spec = SPEC[S.band];
+    const off = ((((S.needle - spec.lo) % G.p) + G.p) % G.p) * G.px;
+    G.strip.style.transform = `translateX(${(G.nx - off).toFixed(2)}px)`;
+    if (S.phase === "moving") G.freq.textContent = rolling(S.band, freqAt(S.band, S.needle));
+  }
+
+  function paintState() {
+    if (!G.strip) return;
+    const on = S.power;
+    const moving = S.phase === "moving";
+    phone.classList.toggle("off", !on);
+    $("btnPower").setAttribute("aria-label", on ? "전원 끄기" : "전원 켜기");
+    document.querySelectorAll(".needs-power").forEach((b) => b.classList.toggle("dim", !on));
+    G.glow.style.opacity = on ? 1 : 0;
+    G.lit.style.opacity = on ? 1 : 0;
+    G.veil.style.opacity = on ? 0 : 1;
+    G.nglow.style.opacity = on ? 0.14 : 0;
+    // ON AIR 표시등 — 방송 중 빨강 · 찾는 중 주황 · 꺼짐 회색
+    const state = !on ? "off" : moving ? "seek" : "on";
+    const lamp = state === "on" ? css("--onAir") : state === "seek" ? css("--dialLampSeek") : css("--onAirLampOff");
+    G.lamp.style.background = lamp;
+    G.lamp.style.border = state === "off" ? `1px solid ${css("--onAirLampOffRing")}` : "0";
+    G.halo.style.background = state === "off" ? "transparent" : lamp + "47";
+    G.shine.style.display = state === "off" ? "none" : "block";
+    G.onairtext.style.color = state === "on" ? css("--needleFMLabel") : state === "off" ? css("--onAirTextOff") : css("--freqDim");
+    // 주파수 · 방송 이름
+    G.freq.style.color = moving ? css("--freqDim") : css("--dialFreq");
+    if (!moving) G.freq.textContent = fmt(S.band, S.station.f);
+    const showLabel = on && !moving;
+    G.label.textContent = S.station.l;
+    const lw = G.label.offsetWidth;
+    G.label.style.left = clamp(G.nx - lw / 2, 6, Math.max(6, G.w - lw - 6)) + "px";
+    G.label.style.opacity = showLabel ? 1 : 0;
+    $("prog").textContent = !on ? "꺼져 있어요" : moving ? "방송 찾는 중…" : S.station.g;
+    $("song").textContent = !on ? "전원을 누르면 다시 켜져요" : "프로그램 · 곡 정보는 앱에서 볼 수 있어요";
+    knob.setAttribute("aria-valuetext", `${fmt(S.band, S.station.f)} ${SPEC[S.band].unit} ${S.station.l}`);
+    $("bandFM").classList.toggle("on", S.band === "FM");
+    $("bandAM").classList.toggle("on", S.band === "AM");
+    renderTiles();
+  }
+
+  // ── 바늘 움직이기 (TunerService.seek와 같은 흐름: 움직이는 동안 이름 숨김 · 주황 불 → '딸깍' 멈추면 이름과 빨간 불) ──
+  function moveTo(pos, station, dir) {
+    const from = S.needle;
+    const spec = SPEC[S.band];
+    const dist = Math.abs(pos - from) / (spec.hi - spec.lo) * NOMINAL_PX;
+    const dur = reduceMotion ? 120 : Math.round(Math.min(SEEK_MAX, SEEK_BASE + dist * SEEK_PER_PX));
+    const eps = spec.tickStep * 0.25 * (dir || Math.sign(pos - from) || 1);
+    S.dest = { pos, station };
+    S.phase = "moving";
+    paintState();
+    if (S.anim) cancelAnimationFrame(S.anim);
+    const t0 = performance.now();
+    const pre = pos - eps;
+    const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+    const SPRING = reduceMotion ? 1 : 300;
+    const step = (now) => {
+      const t = now - t0;
+      if (t < dur) {
+        S.needle = from + (pre - from) * ease(t / dur);
+      } else if (t < dur + SPRING) {
+        // 스프링 '딸깍' — 살짝 지나쳤다 제자리로
+        const u = (t - dur) / SPRING;
+        S.needle = pos - eps * Math.exp(-5 * u) * Math.cos(9 * u);
+      } else {
+        S.needle = norm(S.band, pos);
+        S.anim = null;
+        lock(station);
+        draw();
+        return;
+      }
+      draw();
+      S.anim = requestAnimationFrame(step);
+    };
+    S.anim = requestAnimationFrame(step);
+  }
+
+  function lock(station) {
+    S.station = station;
+    S.last[S.band] = station;
+    S.dest = null;
+    S.phase = "locked";
+    click(true);
+    paintState();
+  }
+
+  function seek(dir, fromKnob) {
+    if (!S.power) setPower(true);
+    const fromPos = S.dest ? S.dest.pos : S.needle;
+    const fromF = S.dest ? S.dest.station.f : S.station.f;
+    const next = nextStation(S.band, fromF, dir);
+    const pos = seekTo(S.band, fromPos, next.f, dir);
+    if (!fromKnob) turnKnob(dir);
+    flashSide(dir);
+    moveTo(pos, next, dir);
+  }
+
+  function tuneDirect(st) {
+    if (!S.power) setPower(true);
+    if (st.band !== S.band) { setBand(st.band, st); return; }
+    if (st === S.station && !S.dest) { click(true); return; }
+    const pos = directTo(S.band, S.needle, st.f);
+    moveTo(pos, st, Math.sign(pos - S.needle) || 1);
+  }
+
+  function setBand(b, st) {
+    if (S.anim) { cancelAnimationFrame(S.anim); S.anim = null; }
+    S.dest = null;
+    S.band = b;
+    S.station = st || S.last[b];
+    S.needle = S.station.f;
+    S.phase = "locked";
+    buildDial();
+    click(true);
+  }
+
+  function setPower(on) {
+    S.power = on;
+    if (!on && S.anim) { cancelAnimationFrame(S.anim); S.anim = null; if (S.dest) { S.station = S.dest.station; S.needle = norm(S.band, S.dest.pos); S.dest = null; } }
+    S.phase = "locked";
+    paintState(); draw();
+  }
+
+  // ── 노브 ──
+  function setKnob(deg, animate) {
+    rotor.style.transition = animate ? "" : "none";
+    rotor.style.transform = `rotate(${deg}deg)`;
+  }
+  function turnKnob(dir) { S.knobDeg += dir * DETENT; setKnob(S.knobDeg, true); }
+  function flashSide(dir) {
+    const el = dir < 0 ? $("btnPrev") : $("btnNext");
+    el.classList.add("flash"); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("flash"), 220);
+  }
+
+  let drag = null;
+  knob.addEventListener("pointerdown", (e) => {
+    knob.setPointerCapture(e.pointerId);
+    const r = knob.getBoundingClientRect();
+    drag = { id: e.pointerId, cx: r.left + r.width / 2, cy: r.top + r.height / 2, last: null, total: 0, detent: 0, fired: 0, base: S.knobDeg };
+    drag.last = Math.atan2(e.clientY - drag.cy, e.clientX - drag.cx);
+    knob.classList.add("drag");
+    unlockAudio();
+  });
+  knob.addEventListener("pointermove", (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const x = e.clientX - drag.cx, y = e.clientY - drag.cy;
+    if (Math.hypot(x, y) < 10) return;
+    const ang = Math.atan2(y, x);
+    let d = ((ang - drag.last) * 180) / Math.PI;
+    if (d > 180) d -= 360; else if (d < -180) d += 360;
+    drag.last = ang; drag.total += d; drag.detent += d;
+    setKnob(drag.base + drag.total, false);
+    while (drag.detent >= DETENT) { drag.detent -= DETENT; drag.fired += 1; tick(); seek(1, true); }
+    while (drag.detent <= -DETENT) { drag.detent += DETENT; drag.fired -= 1; tick(); seek(-1, true); }
+  });
+  const endDrag = (e) => {
+    if (!drag || (e && e.pointerId !== drag.id)) return;
+    S.knobDeg = drag.base + drag.fired * DETENT;
+    knob.classList.remove("drag");
+    setKnob(S.knobDeg, true);
+    drag = null;
+  };
+  knob.addEventListener("pointerup", endDrag);
+  knob.addEventListener("pointercancel", endDrag);
+  knob.addEventListener("wheel", (e) => { e.preventDefault(); unlockAudio(); seek(e.deltaY > 0 ? 1 : -1); }, { passive: false });
+  knob.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight" || e.key === "ArrowUp") { e.preventDefault(); unlockAudio(); seek(1); }
+    else if (e.key === "ArrowLeft" || e.key === "ArrowDown") { e.preventDefault(); unlockAudio(); seek(-1); }
+  });
+  document.addEventListener("keydown", (e) => {
+    const tg = e.target;
+    if (tg === knob || (tg && tg.closest && tg.closest("input,textarea,select")) || $("sheet").classList.contains("show")) return;
+    if (e.key === "ArrowRight") { unlockAudio(); seek(1); }
+    else if (e.key === "ArrowLeft") { unlockAudio(); seek(-1); }
+  });
+  $("btnPrev").addEventListener("click", () => { unlockAudio(); seek(-1); });
+  $("btnNext").addEventListener("click", () => { unlockAudio(); seek(1); });
+  $("bandFM").addEventListener("click", () => { unlockAudio(); if (S.band !== "FM") setBand("FM"); });
+  $("bandAM").addEventListener("click", () => { unlockAudio(); if (S.band !== "AM") setBand("AM"); });
+  $("btnPower").addEventListener("click", () => { unlockAudio(); setPower(!S.power); if (S.power) click(true); });
+
+  // ── 즐겨찾기 ──
+  function renderTiles() {
+    const box = $("tiles");
+    const cur = S.power && S.phase === "locked" ? S.station : null;
+    box.innerHTML = S.presets.map((st, i) => st
+      ? `<button class="tile${cur && cur.band === st.band && cur.f === st.f ? " on" : ""}" data-i="${i}"><span class="n">${st.l.replace(" ", "<br>")}</span><span class="f">${fmt(st.band, st.f)}</span></button>`
+      : `<button class="tile empty" data-i="${i}"><span class="n">+<br>비어 있음</span></button>`).join("");
+  }
+  $("tiles").addEventListener("click", (e) => {
+    const b = e.target.closest(".tile"); if (!b) return;
+    unlockAudio();
+    const st = S.presets[+b.dataset.i];
+    if (st) tuneDirect(st);
+    else toast("앱에서는 빈칸을 길게 누르면 지금 듣는 방송이 저장돼요. 채운 칸은 들어서 옮기거나 노브 자리의 휴지통에 놓아 비워요.");
+  });
+
+  // ── 안내 · 설정 시트 ──
+  const MSG = {
+    rec: "지금 녹음 — 앱에서는 누른 순간부터 m4a로 녹음해요(한 번에 2시간까지).",
+    timer: "자동 끄기 — 앱에서는 15 · 30 · 60 · 90분 뒤, 또는 이 프로그램이 끝나면 서서히 꺼져요.",
+    region: "앱에서는 8개 나라 28개 지역의 다이얼을 고를 수 있어요. 이 시뮬레이션은 서울·경기·인천만 보여 줘요.",
+    locate: "앱에서는 내 위치 아이콘을 누르면 지금 있는 곳의 방송으로 맞춰요.",
+    menu: "앱에서는 여기를 누르면 메뉴(라디오 · 인터넷 · 예약 · 재생)가 떠요.",
+  };
+  document.querySelectorAll("[data-msg]").forEach((el) => el.addEventListener("click", () => toast(MSG[el.dataset.msg])));
+  let toastT;
+  function toast(msg) {
+    const t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 3200);
+  }
+  const sheet = $("sheet");
+  $("btnSettings").addEventListener("click", () => { markTheme(); sheet.classList.add("show"); });
+  $("sheetClose").addEventListener("click", () => sheet.classList.remove("show"));
+  sheet.addEventListener("click", (e) => { if (e.target === sheet) sheet.classList.remove("show"); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") sheet.classList.remove("show"); });
+  function markTheme() { document.querySelectorAll(".theme").forEach((b) => b.classList.toggle("on", b.dataset.themeId === S.theme)); }
+  document.querySelectorAll(".theme").forEach((b) => b.addEventListener("click", () => {
+    S.theme = b.dataset.themeId;
+    phone.dataset.theme = S.theme;
+    sheet.dataset.theme = S.theme;
+    document.querySelector('meta[name="theme-color"]').content = css("--bg");
+    markTheme(); buildDial();
+  }));
+
+  // ── 딸깍 소리 · 진동 (방송 소리는 없다) ──
+  let ac = null;
+  function unlockAudio() {
+    if (!S.sound || ac) return;
+    const C = window.AudioContext || window.webkitAudioContext;
+    if (C) { try { ac = new C(); } catch (_) { ac = null; } }
+  }
+  function blip(freq, len, gain) {
+    if (!S.sound || !ac) return;
+    try {
+      if (ac.state === "suspended") ac.resume();
+      const n = Math.floor(ac.sampleRate * len);
+      const buf = ac.createBuffer(1, n, ac.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3);
+      const src = ac.createBufferSource(); src.buffer = buf;
+      const bp = ac.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = freq; bp.Q.value = 3;
+      const g = ac.createGain(); g.gain.value = gain;
+      src.connect(bp); bp.connect(g); g.connect(ac.destination); src.start();
+    } catch (_) { /* 소리는 없어도 된다 */ }
+  }
+  function tick() { blip(2600, 0.012, 0.35); if (navigator.vibrate) try { navigator.vibrate(8); } catch (_) {} }
+  function click(strong) {
+    blip(1500, 0.03, strong ? 0.7 : 0.4);
+    if (navigator.vibrate) try { navigator.vibrate(strong ? 14 : 8); } catch (_) {}
+  }
+  $("btnSound").addEventListener("click", (e) => {
+    S.sound = !S.sound;
+    e.currentTarget.textContent = S.sound ? "딸깍 소리 켬" : "딸깍 소리 끔";
+    e.currentTarget.setAttribute("aria-pressed", String(S.sound));
+    if (S.sound) unlockAudio();
+  });
+
+  // ── 시작 ──
+  let rt;
+  window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(buildDial, 80); });
+  const start = () => { buildDial(); renderTiles(); };
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(start); else start();
+  start();
+})();
+</script>
+</body>
+</html>

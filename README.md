@@ -15,7 +15,7 @@
       <br><br>
       안드로이드 · 무료 · 정식 출시 전 (먼저 써 볼 수 있어요)
       <br><br>
-      <a href="yuradio/README.md">소개 보기</a> · <a href="yuradio/README.md#설치-방법">설치 방법</a>
+      <a href="yuradio/README.md">소개 보기</a> · <a href="https://nexteco.github.io/homepage/yuradio/demo/">웹에서 만져 보기</a> · <a href="yuradio/README.md#설치-방법">설치 방법</a>
     </td>
   </tr>
   <!-- 새 앱을 더할 때: 앱 이름으로 폴더를 만들고(예: newapp/README.md, newapp/images/), 위의 <tr> … </tr> 한 묶음을 복사해 이 아래에 붙인 뒤 내용을 바꿉니다 -->
